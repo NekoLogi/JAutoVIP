@@ -1,24 +1,33 @@
 package com.gmail.nekologi.twitch.utils;
 
 import java.io.*;
+import java.security.InvalidParameterException;
 import java.time.LocalDate;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import org.omg.CORBA.DynAnyPackage.Invalid;
 
 public class Viewer {
     private final String PATH = "users";
-    public String Username;
-    public LocalDate LastSeen = LocalDate.now();
-    public int ActiveStreak;
+    private String Username;
+    private LocalDate LastSeen = LocalDate.now();
+    private int ActiveStreak = 1;
 
     public Viewer(String username)
     {
-        Username = username;
+        constructUsername(username);
     }
 
     public Viewer(String username, LocalDate lastSeen, int activeStreak)
     {
-        Username = username;
+        constructUsername(username);
+
+        if (lastSeen == null)
+            throw new NullPointerException("LastSeen can't be null");
         LastSeen = lastSeen;
+
+        if (activeStreak < 1)
+            throw new ArithmeticException("ActiveStreak can't be lower than 1");
         ActiveStreak = activeStreak;
     }
 
@@ -30,8 +39,7 @@ public class Viewer {
         Username = value;
     }
 
-    public Viewer load(String username)
-    {
+    public Viewer load(String username) {
         init();
         String path = PATH + "/" + username + ".json";
         if (username == null)
@@ -54,40 +62,65 @@ public class Viewer {
         return null;
     }
 
-    public void save()
-    {
+    public void save() {
         init();
         try {
-            new Gson().toJson(this, new FileWriter(PATH + "/" + this.Username + ".json"));
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            gson.toJson(this, new FileWriter(PATH + "/" + this.Username + ".json"));
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    public void streakIncrement()
-    {
+    public int getActiveStreak() {
+        return ActiveStreak;
+    }
+
+    public void streakIncrement() {
         ActiveStreak++;
         save();
     }
 
-    public void streakReset()
-    {
+    public void streakReset() {
         ActiveStreak = 1;
         save();
     }
 
-    public void setLastSeen(LocalDate date)
-    {
+    public LocalDate getLastSeen() {
+        return LastSeen;
+    }
+
+    public void setLastSeen(LocalDate date) {
         LastSeen = date;
         save();
     }
 
-    private void init()
-    {
+    private void constructUsername(String username) {
+        if (username == null)
+            throw new NullPointerException("Username can't be null");
+        if (username.isEmpty())
+            throw new NullPointerException("Username can't be empty");
+        if (username.contains(" "))
+            throw new InvalidParameterException("Username can't contain whitespaces");
+        Username = username;
+    }
+
+    @Override
+    public String toString() {
+        return "Viewer{" +
+                "PATH='" + PATH + '\'' +
+                ", Username='" + Username + '\'' +
+                ", LastSeen=" + LastSeen +
+                ", ActiveStreak=" + ActiveStreak +
+                '}';
+    }
+
+    private void init() {
         File file = new File(PATH);
         if (!file.exists()) {
             try {
-                file.createNewFile();
+                if (file.createNewFile())
+                    System.out.println("Failed to create directory: " + PATH);
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
